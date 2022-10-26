@@ -28,3 +28,30 @@ def ncolor(n, cmap='viridis'):
     cmap = matplotlib.cm.get_cmap(cmap)
     arr = np.linspace(0, 1, n)
     return [matplotlib.colors.rgb2hex(cmap(x)) for x in arr] 
+
+
+
+
+def getScores(label, clusterGenes, pandf, controlList):
+    newRows = []
+    nGenes = len(clusterGenes)
+    
+    for ctype in controlList:
+        c = pandf[pandf['cell type'] == ctype]
+        ctypeGenes = c['gene'].to_list()
+        
+        matches = clusterGenes[clusterGenes['gene'].isin(ctypeGenes)]
+        s = matches['nRank'].sum() / len(matches)
+        
+        newCol = f"cluster {int(label)+1}"
+            
+        row = {
+            'type' : ctype,
+            newCol : s
+        }
+        newRows.append(row)
+
+    scores = pd.DataFrame(newRows)
+    scores = scores.set_index('type')
+    scores = scores.sort_values(by=newCol, ascending=False)
+    return scores

@@ -7,6 +7,7 @@ import umap
 from sklearn.cluster import SpectralClustering
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
+from sklearn import metrics
 from importlib import reload
 import matplotlib.pyplot as plt
 import matplotlib
@@ -31,6 +32,7 @@ class Data:
         
         # clustering attribs
         self.cluster_type = None
+        self.cluster_data = None
         self.k = None
         self.clusters = None
         self.labels = None
@@ -56,7 +58,6 @@ class Data:
         self.u = u
         self.s = s
         self.vh = vh  
-        print("Done SVD.")
         
         
     def getOHT(self):
@@ -71,7 +72,6 @@ class Data:
         tau = omega * y_med
         s_ind = np.argwhere(self.s >= tau)
         self.oht = np.max(s_ind) 
-        print("Done OHT.")
         
             
     def UMAP(self, centered=True, **kwargs):
@@ -79,7 +79,6 @@ class Data:
         self.umap_reducer = umap.UMAP(**kwargs)
         self.umap_params = dict(kwargs)
         self.umap_embedding = self.umap_reducer.fit_transform(X)
-        print("Done UMAP.")
         
         
     def querylClusters(self):
@@ -87,7 +86,6 @@ class Data:
         if self.clusters is None:
             raise ValueError("Clusters not computed, run a clustering method!")
             
-        print(f"Querying {self.cluster_type}")
         res = {}
         for label in set(self.labels):
             data = self.X[self.labels == label].T
@@ -104,34 +102,58 @@ class Data:
             grped['nCells'] = data.shape[1]
             res[label] = grped.reset_index(drop=False) 
         self.results = res
-        print("Done Querying.")
-    
         
-    def simpleClustering(self, k):
-        """k-means on UMAP embeddings"""
+
+    def scoreClusters(self):
+        if self.clusters is None:
+            raise ValueError("Clusters not computed, run a clustering method!")
+            
+        ss = metrics.silhouette_score(self.cluster_data, 
+                                      self.labels, 
+                                      metric='euclidean')
+        
+        vrc = metrics.calinski_harabasz_score(self.cluster_data, 
+                                              self.labels)
+        
+        db = metrics.davies_bouldin_score(self.cluster_data, 
+                                              self.labels)
+        
+        return {
+            'silhouette_score' : ss,
+            'calinski_harabasz_score' : vrc,
+            'davies_bouldin_score' : db
+        }
+        
+    def simpleClustering(self, k, n=2, use_umap=True):
+        """k-means on UMAP embeddings
+        k is the number of clusters
+        n is the number of umap dimensions used
+        """
         if self.umap_reducer is None:
             raise ValueError("UMAP not computed, run Data.UMAP()!")
+            
+        if use_umap:
+            self.cluster_data = self.umap_embedding[:, 0:n]
+        else:
+            self.cluster_data = self.u[:, 0:n]
         
         kmeans = KMeans(n_clusters=k,
-                        random_state=0).fit(self.umap_embedding)
+                        random_state=0).fit(self.cluster_data)
 
         self.cluster_type = "simple"
         self.k = k 
         self.clusters = kmeans
         self.labels = kmeans.labels_
         
-        print("Done Simple Clustering.")
         
     
     def dotsonClustering(self, k):
         """A function to perform clustering as in the 
         manuscript """
         if self.u is None:
-            print("Running SVD...")
             self.svd()
         
         if self.oht is None:
-            print("Computing OHT...")
             self.getOHT()
             
         # construct P, note that the data is transposed
@@ -139,11 +161,11 @@ class Data:
         
         # precompute distance matrix 
         A = scipy.spatial.distance.pdist(P, 'euclidean')
-        A = scipy.spatial.distance.squareform(A)
+        self.cluster_data = scipy.spatial.distance.squareform(A)
         spect = SpectralClustering(n_clusters=k,
                               assign_labels='discretize',
                               affinity='precomputed', # this is important !
-                              random_state=0).fit(A)
+                              random_state=0).fit(self.cluster_data)
         
         self.cluster_type = "dontson"
         self.k = k 
