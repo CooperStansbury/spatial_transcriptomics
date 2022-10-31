@@ -55,3 +55,22 @@ def getScores(label, clusterGenes, pandf, controlList):
     scores = scores.set_index('type')
     scores = scores.sort_values(by=newCol, ascending=False)
     return scores
+
+
+def scoreCluster(geneClusterRanks, cellTypeSig, use_mean_rank=False):
+    """A function to score a cluster based on within-cluster 
+    gene rankings and a list of input marker genes 
+
+    Args:
+        geneClusterRanks (pd.Dataframe): gene names and ranks, must
+            have columns: ['gene', 'rank']
+        cellTypeSig (list or array): marker genes for the cell type
+    """
+    matches = geneClusterRanks[geneClusterRanks['gene'].isin(cellTypeSig)]
+    if use_mean_rank:
+        s = matches['rank'].mean()
+    else:
+        s = matches['rank'].median()
+    return s
+
+
