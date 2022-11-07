@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib 
 import matplotlib.pyplot as plt
 import scanpy as sc
+from scipy import stats
 
 
 def read_panglaodb(path):
@@ -57,7 +58,7 @@ def getScores(label, clusterGenes, pandf, controlList):
     return scores
 
 
-def scoreCluster(geneClusterRanks, cellTypeSig, use_mean_rank=False):
+def scoreCluster(geneClusterRanks, cellTypeSig, use='mean'):
     """A function to score a cluster based on within-cluster 
     gene rankings and a list of input marker genes 
 
@@ -66,11 +67,19 @@ def scoreCluster(geneClusterRanks, cellTypeSig, use_mean_rank=False):
             have columns: ['gene', 'rank']
         cellTypeSig (list or array): marker genes for the cell type
     """
-    matches = geneClusterRanks[geneClusterRanks['gene'].isin(cellTypeSig)]
-    if use_mean_rank:
+    matches = geneClusterRanks[geneClusterRanks['gene'].isin(cellTypeSig)].reset_index()
+    
+    if use == 'mean':
         s = matches['rank'].mean()
-    else:
+    elif use == 'median':
         s = matches['rank'].median()
+    elif use == 'hmean':
+        s = stats.hmean(matches['rank'].to_list())
+    elif use == 'sum':
+        s = matches['rank'].sum()
+    else:
+        raise ValueError(f'use type {use} undefined')
+        
     return s
 
 
