@@ -11,6 +11,8 @@ from Bio.KEGG import REST
 from Bio.KEGG.KGML import KGML_parser
 import io
 
+COLORS = ['#9e0142', '#e95c47', '#fdbf6f', '#ffffbe', '#bfe5a0', '#54aead', '#5e4fa2']
+MACCOLORS = [ '#9835e4','#e48035','#8e0152','#9acd61','#276419',]
 
 def read_panglaodb(path):
     """A function to read all panglaodb files """
