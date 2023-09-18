@@ -38,8 +38,6 @@ def ncolor(n, cmap='viridis'):
     return [matplotlib.colors.rgb2hex(cmap(x)) for x in arr] 
 
 
-
-
 def getScores(label, clusterGenes, pandf, controlList):
     newRows = []
     nGenes = len(clusterGenes)
@@ -111,7 +109,6 @@ def getPathname(pathId):
     """A function to return the legg pathname"""
     result = REST.kegg_list(pathId).read()
     return result.split("\t")[1].split("-")[0].strip()
-
 
 
 def makeColorbar(cmap, width, hieght, title, orientation, tickLabels):
